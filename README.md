@@ -1,6 +1,6 @@
 # diffr
 
-This is a pretty basic diff tool that I created to play with the Longest Common Subsequence algorithm. See [wikipedia](https://en.wikipedia.org/wiki/Longest_common_subsequence_problem) for details. Subsequent to the initial commit of this tool, I moved the meat of the algorithm to a separate repo: (diff)[https://github.com/fivegreenapples/diff] for use in other projects.
+This is a pretty basic diff tool that I created to play with the Longest Common Subsequence algorithm. See [wikipedia](https://en.wikipedia.org/wiki/Longest_common_subsequence_problem) for details. Subsequent to the initial commit of this tool, I moved the meat of the algorithm to a separate repo, [diff](https://github.com/fivegreenapples/diff), for use in other projects.
 
 Usage:
 
