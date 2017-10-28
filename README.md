@@ -1,6 +1,6 @@
 # diffr
 
-This is a pretty basic diff tool that I created to play with the Longest Common Subsequence algorithm. See [wikipedia](https://en.wikipedia.org/wiki/Longest_common_subsequence_problem) for details.
+This is a pretty basic diff tool that I created to play with the Longest Common Subsequence algorithm. See [wikipedia](https://en.wikipedia.org/wiki/Longest_common_subsequence_problem) for details. Subsequent to the initial commit of this tool, I moved the meat of the algorithm to a separate repo: (diff)[https://github.com/fivegreenapples/diff] for use in other projects.
 
 Usage:
 
@@ -8,12 +8,19 @@ Usage:
 diffr file1.txt file2.txt
 ```
 
-Example output:
+Output mimics the output from the standard diff tool. e.g.:
 
 ```
-+ this line was added
-+ so was this line
-- but this line was taken away
+1a2
+> This line was added
+3,4d3
+< This line was deleted
+< So was this line
+6,7c5,6
+< These lines were changed...
+< ...into something else
+---
+> They were changed into...
+> ...much nicer lines
 ```
 
-You'll note the output doesn't give anything helpful like line numbers or instructions for `patch`. It is that basic...
