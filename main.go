@@ -1,15 +1,13 @@
 package main
 
 import (
-	"bufio"
-	"crypto/md5" // #nosec
+	"bufio" // #nosec
 	"fmt"
 	"io"
 	"os"
-)
 
-type md5Slice [][md5.Size]byte
-type lineSlice [][]byte
+	"github.com/fivegreenapples/diff"
+)
 
 func main() {
 	if len(os.Args) == 1 {
@@ -37,48 +35,94 @@ func main() {
 		os.Exit(2)
 	}
 
-	hashesA, linesA, err := hashLines(fileA)
+	linesA, err := readLines(fileA)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(3)
 	}
-	hashesB, linesB, err := hashLines(fileB)
+	linesB, err := readLines(fileB)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(3)
 	}
 
-	lcs := findLCS(hashesA, hashesB)
+	patch := diff.MakeStringPatch(linesA, linesB)
 
-	cursorA, cursorB, cursorCom := 0, 0, 0
-	for cursorCom < len(lcs) || cursorA < len(hashesA) || cursorB < len(hashesB) {
-		for cursorCom < len(lcs) &&
-			cursorA < len(hashesA) &&
-			cursorB < len(hashesB) &&
-			lcs[cursorCom] == hashesA[cursorA] &&
-			lcs[cursorCom] == hashesB[cursorB] {
-			// common item, move on all cursors
-			cursorCom++
-			cursorA++
-			cursorB++
+	indexA := 0
+	indexB := 0
+	indexP := 0
+
+	for indexP < len(patch) || indexA < len(linesA) {
+		if indexP < len(patch) {
+			currentChange := patch[indexP]
+			if currentChange.Offset == indexA {
+				// Act on current change as we're at the right line number
+
+				// First render the header
+				if len(currentChange.Add) > 0 && currentChange.Skip > 0 {
+					// A modification
+					fmt.Printf("%d", indexA+1)
+					if currentChange.Skip > 1 {
+						fmt.Printf(",%d", indexA+currentChange.Skip)
+					}
+					fmt.Print("c")
+					fmt.Printf("%d", indexB+1)
+					if len(currentChange.Add) > 1 {
+						fmt.Printf(",%d", indexB+len(currentChange.Add))
+					}
+					fmt.Print("\n")
+				} else if currentChange.Skip > 0 {
+					// A deletion
+					fmt.Printf("%d", indexA+1)
+					if currentChange.Skip > 1 {
+						fmt.Printf(",%d", indexA+currentChange.Skip)
+					}
+					fmt.Printf("d%d\n", indexB)
+				} else if len(currentChange.Add) > 0 {
+					// An addition
+					fmt.Printf("%da%d", indexA, indexB+1)
+					if len(currentChange.Add) > 1 {
+						fmt.Printf(",%d", indexB+len(currentChange.Add))
+					}
+					fmt.Print("\n")
+				}
+
+				if currentChange.Skip > 0 {
+					// A deletion of lines
+					for s := 0; s < currentChange.Skip; s++ {
+						fmt.Printf("< %s", linesA[indexA])
+						indexA++
+					}
+				}
+				if currentChange.Skip > 0 && len(currentChange.Add) > 0 {
+					fmt.Print("---\n")
+				}
+				if len(currentChange.Add) > 0 {
+					// An addition of lines
+					for _, l := range currentChange.Add {
+						fmt.Printf("> %s", l)
+						indexB++
+					}
+				}
+				indexP++
+				continue
+			} else if indexA >= len(linesA) {
+				// this protects us from a duff patch where items in the patch
+				// reference beyond the end of the original.
+				break
+			}
 		}
-		for cursorA < len(hashesA) &&
-			(cursorCom >= len(lcs) || lcs[cursorCom] != hashesA[cursorA]) {
-			fmt.Printf("- %s", linesA[cursorA])
-			cursorA++
-		}
-		for cursorB < len(hashesB) &&
-			(cursorCom >= len(lcs) || lcs[cursorCom] != hashesB[cursorB]) {
-			fmt.Printf("+ %s", linesB[cursorB])
-			cursorB++
+
+		if indexA < len(linesA) {
+			indexA++
+			indexB++
 		}
 	}
 
 }
 
-func hashLines(r io.Reader) (md5Slice, lineSlice, error) {
-	lines := lineSlice{}
-	hashes := md5Slice{}
+func readLines(r io.Reader) ([]string, error) {
+	lines := []string{}
 	bufR := bufio.NewReader(r)
 
 	var err error
@@ -86,15 +130,14 @@ func hashLines(r io.Reader) (md5Slice, lineSlice, error) {
 	for err == nil {
 		line, err = bufR.ReadBytes('\n')
 		if len(line) > 0 {
-			lines = append(lines, line)
-			hashes = append(hashes, md5.Sum(line)) // #nosec
+			lines = append(lines, string(line))
 		}
 
 	}
 
 	if err != io.EOF {
-		return md5Slice{}, lineSlice{}, err
+		return []string{}, err
 	}
 
-	return hashes, lines, nil
+	return lines, nil
 }
